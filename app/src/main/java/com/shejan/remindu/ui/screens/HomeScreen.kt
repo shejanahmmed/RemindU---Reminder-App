@@ -33,8 +33,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.remindu.ui.theme.*
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.shejan.remindu.ui.viewmodels.RemindUViewModel
+import java.time.format.DateTimeFormatter
+import java.time.LocalDate
+
 @Composable
-fun HomeScreen(onFabClick: () -> Unit) {
+fun HomeScreen(
+    onFabClick: () -> Unit,
+    viewModel: RemindUViewModel = viewModel()
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         // Removed bottomBar from Scaffold to avoid solid background area
@@ -57,7 +65,7 @@ fun HomeScreen(onFabClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(32.dp))
                 CalendarSection()
                 Spacer(modifier = Modifier.height(32.dp))
-                TimelineSection()
+                TimelineSection(viewModel)
                 Spacer(modifier = Modifier.height(100.dp)) // Extra space for scrolling above FAB
             }
         }
@@ -299,7 +307,11 @@ fun CalendarDayItem(day: String, date: String, isSelected: Boolean) {
 }
 
 @Composable
-fun TimelineSection() {
+fun TimelineSection(viewModel: RemindUViewModel) {
+    val reminders = viewModel.reminders
+    val today = LocalDate.now()
+    val todayReminders = reminders.filter { it.dateTime.toLocalDate() == today }
+    
     Column {
         Text(
             text = "Today's Timeline",
@@ -309,59 +321,54 @@ fun TimelineSection() {
         )
         Spacer(modifier = Modifier.height(24.dp))
         
-        Box {
-             // Vertical Line
-            Column(modifier = Modifier.padding(start = 19.dp, top = 24.dp)) {
+        if (todayReminders.isEmpty()) {
+             Box(
+                 modifier = Modifier.fillMaxWidth().padding(32.dp),
+                 contentAlignment = Alignment.Center
+             ) {
+                 Text(
+                     text = "No tasks for today ✨",
+                     style = MaterialTheme.typography.bodyLarge,
+                     color = MaterialTheme.colorScheme.onTertiary
+                 )
+             }
+        } else {
+            Box {
+                // Vertical Line
                 Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .height(300.dp) // Approximate height for now
-                        .background(Color.LightGray.copy(alpha = 0.5f))
-                )
-            }
-            
-            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                TimelineItem(
-                    title = "Morning Vitamins",
-                    subtitle = "Take with water",
-                    time = "8:00 AM",
-                    icon = Icons.Rounded.Favorite,
-                    iconBgColor = Color(0xFFE8F5E9),
-                    iconTint = Color(0xFF2E7D32),
-                    isCompleted = true
-                )
-                  TimelineItem(
-                    title = "Design Sprint",
-                    subtitle = "Review wireframes with team",
-                    time = "10:30 AM",
-                    icon = Icons.Rounded.DateRange,
-                    iconBgColor = Color.White.copy(alpha = 0.2f),
-                    iconTint = Color.White,
-                    isHighLight = true,
-                    avatars = true
-                )
-                 TimelineItem(
-                    title = "Lunch Break",
-                    subtitle = "Healthy Salad",
-                    time = "1:00 PM",
-                    icon = Icons.Rounded.Star,
-                    iconBgColor = Color(0xFFFFF3E0), // Orange-ish
-                    iconTint = Color(0xFFEF6C00),
-                    isCompleted = false
-                )
-                 TimelineItem(
-                    title = "Gym Session",
-                    subtitle = "Leg day routine",
-                    time = "5:30 PM",
-                    icon = Icons.Rounded.PlayArrow,
-                    iconBgColor = Color(0xFFF3E5F5), // Purple-ish
-                    iconTint = Color(0xFF7B1FA2),
-                    isCompleted = false
-                )
+                     modifier = Modifier
+                        .matchParentSize() 
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 19.dp)
+                            .width(2.dp)
+                            .fillMaxHeight()
+                            .background(Color.LightGray.copy(alpha = 0.5f))
+                    )
+                }
+                
+                Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                    val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
+                    
+                    todayReminders.forEachIndexed { index, reminder ->
+                         TimelineItem(
+                            title = reminder.title,
+                            subtitle = reminder.description.ifBlank { reminder.category?.name ?: "Reminder" },
+                            time = reminder.dateTime.format(timeFormatter),
+                            icon = reminder.category?.icon ?: Icons.Rounded.Task,
+                            iconBgColor = reminder.category?.color?.copy(alpha=0.1f) ?: Color(0xFFE8F5E9),
+                            iconTint = reminder.category?.color ?: Color(0xFF2E7D32),
+                            isCompleted = reminder.isCompleted,
+                            isHighLight = false // Keep standard for now
+                        )
+                    }
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun TimelineItem(
@@ -379,8 +386,7 @@ fun TimelineItem(
         // Timeline Node
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .padding(end = 16.dp),
+                .width(40.dp), // Container for dot
             contentAlignment = Alignment.Center
         ) {
             if (isHighLight) {
@@ -414,11 +420,18 @@ fun TimelineItem(
             }
         }
         
+        Spacer(modifier = Modifier.width(16.dp))
+        
         // Card content
         val cardBg = if (isHighLight) 
             androidx.compose.ui.graphics.Brush.linearGradient(listOf(PrimaryColor, Color(0xFF757ce8)))
-            else androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.surface)
+            else androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.surface) // Keep surface for readability, but check if we should remove shadow
             
+        // Actually, let's make non-highlighted transparent as suspected
+        val actualCardBg = if (isHighLight) 
+             androidx.compose.ui.graphics.Brush.linearGradient(listOf(PrimaryColor, Color(0xFF757ce8)))
+             else androidx.compose.ui.graphics.SolidColor(Color.White)
+             
         val textColor = if (isHighLight) Color.White else MaterialTheme.colorScheme.onBackground
         val subTextColor = if (isHighLight) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onTertiary
         
@@ -426,16 +439,16 @@ fun TimelineItem(
              modifier = Modifier
                  .fillMaxWidth()
                  .shadow(
-                     elevation = if(isHighLight) 10.dp else 2.dp,
+                     elevation = if(isHighLight) 10.dp else 0.dp, // No shadow for others
                      shape = RoundedCornerShape(24.dp),
-                     spotColor = if(isHighLight) PrimaryColor else Color.Black.copy(alpha = 0.1f)
+                     spotColor = if(isHighLight) PrimaryColor else Color.Transparent
                  ),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Use Box for gradient
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent) 
         ) {
             Box(
                 modifier = Modifier
-                    .background(cardBg)
+                    .background(actualCardBg) // Use the BG
                     .padding(16.dp)
             ) {
                 Row(

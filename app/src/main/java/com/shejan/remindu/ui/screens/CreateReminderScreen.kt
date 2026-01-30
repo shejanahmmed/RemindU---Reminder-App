@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.remindu.ui.theme.*
 import androidx.compose.ui.platform.LocalConfiguration
-import com.shejan.remindu.ui.viewmodels.CreateReminderViewModel
+import com.shejan.remindu.ui.viewmodels.RemindUViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -44,7 +44,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CreateReminderScreen(
     onBackClick: () -> Unit,
-    viewModel: CreateReminderViewModel = viewModel()
+    viewModel: RemindUViewModel = viewModel()
 ) {
     val showBottomSheet by viewModel.showBottomSheet
     val showCategoryDialog by viewModel.showCategoryDialog
@@ -57,7 +57,7 @@ fun CreateReminderScreen(
     val categories = viewModel.categories
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color(0xFFeedec2)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -99,7 +99,35 @@ fun CreateReminderScreen(
             ReminderTypeSection()
             Spacer(modifier = Modifier.height(32.dp))
             RepeatSection()
-            Spacer(modifier = Modifier.height(140.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // Save Button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .shadow(4.dp, RoundedCornerShape(28.dp), spotColor = Color(0xFFf89f24).copy(alpha = 0.5f))
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Color(0xFFf89f24))
+                        .clickable {
+                            viewModel.saveReminder(onSuccess = onBackClick)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Save Reminder",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
         
         if (showBottomSheet) {
@@ -140,8 +168,8 @@ fun CreateHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight() // Allow height to expand for text
-            .padding(vertical = 8.dp, horizontal = 24.dp), // Add some breathing room
+            .wrapContentHeight()
+            .padding(vertical = 8.dp, horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -156,26 +184,6 @@ fun CreateHeader() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onTertiary
             )
-        }
-
-        Box(
-            modifier = Modifier
-                .height(40.dp)
-                .shadow(4.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.5f))
-                .clip(CircleShape)
-                .background(
-                    Brush.horizontalGradient(listOf(PrimaryColor, Color(0xFF7C41F2)))
-                )
-                .clickable { /* TODO: Save Logic */ }
-                .padding(horizontal = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-             Text(
-                 text = "Save",
-                 style = MaterialTheme.typography.labelLarge,
-                 fontWeight = FontWeight.Bold,
-                 color = Color.White
-             )
         }
     }
 }
@@ -200,11 +208,11 @@ fun TitleSection(title: String, onTitleChange: (String) -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(2.dp, RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp)),
+                .background(Color(0xFFfefdf6), RoundedCornerShape(24.dp)),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = Color(0xFFfefdf6),
+                unfocusedContainerColor = Color(0xFFfefdf6),
+                disabledContainerColor = Color(0xFFfefdf6),
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             ),
@@ -233,11 +241,11 @@ fun InputSection(description: String, onDescriptionChange: (String) -> Unit) {
                 .fillMaxWidth()
                 .height(140.dp)
                 .shadow(2.dp, RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp)),
+                .background(Color(0xFFfefdf6), RoundedCornerShape(24.dp)),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = Color(0xFFfefdf6),
+                unfocusedContainerColor = Color(0xFFfefdf6),
+                disabledContainerColor = Color(0xFFfefdf6),
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             ),
@@ -272,33 +280,31 @@ fun CategorySection(categories: List<Category>, onCreateClick: () -> Unit, onCat
                 )
             }
             
-            if (categories.isEmpty()) {
-                item {
-                    Surface(
-                        color = SecondaryColor,
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier
-                            .height(44.dp)
-                            .clickable { onCreateClick() }
+            item {
+                Surface(
+                    color = SecondaryColor,
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .clickable { onCreateClick() }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Add,
-                                contentDescription = "Add Category",
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Create",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = "Add Category",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Create",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 }
             }
@@ -942,6 +948,8 @@ fun getRepeatSummary(days: Set<Int>): String {
 
 
 @OptIn(ExperimentalMaterial3Api::class)
+
+
 @Composable
 fun CreateCategoryDialog(
     existingCategory: Category? = null,

@@ -4,10 +4,17 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.shejan.remindu.ui.screens.Category
+import com.shejan.remindu.data.model.Reminder
 import java.time.LocalDateTime
 
-class CreateReminderViewModel : ViewModel() {
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+
+class RemindUViewModel : ViewModel() {
     
+    // Data State
+    val reminders = mutableStateListOf<Reminder>()
+
     // Form State
     var reminderTitle = mutableStateOf("")
         private set
@@ -23,12 +30,17 @@ class CreateReminderViewModel : ViewModel() {
 
     // Category State
     var categories = mutableStateListOf<Category>()
+    var selectedCategory = mutableStateOf<Category?>(null)
         private set
         
     // Dialog & Sheet Visibility
     var showBottomSheet = mutableStateOf(false)
     var showCategoryDialog = mutableStateOf(false)
     var editingCategory = mutableStateOf<Category?>(null)
+
+    // Repeat State
+    var isRepeatEnabled = mutableStateOf(false)
+    var repeatDays = mutableStateOf<Set<Int>>(emptySet())
 
     // Events
     fun onTitleChange(newTitle: String) {
@@ -45,6 +57,10 @@ class CreateReminderViewModel : ViewModel() {
     
     fun onTypeSelected(type: String) {
         selectedType.value = type
+    }
+
+    fun onCategorySelected(category: Category) {
+        selectedCategory.value = category
     }
     
     fun addCategory(category: Category) {
@@ -65,5 +81,31 @@ class CreateReminderViewModel : ViewModel() {
     fun onEditCategory(category: Category?) {
         editingCategory.value = category
         showCategoryDialog.value = true
+    }
+    
+    fun saveReminder(onSuccess: () -> Unit) {
+        if (reminderTitle.value.isBlank() || selectedDateTime.value == null) return
+        
+        val newReminder = Reminder(
+            title = reminderTitle.value,
+            description = reminderDescription.value,
+            dateTime = selectedDateTime.value!!,
+            type = selectedType.value,
+            category = selectedCategory.value,
+            repeatDays = if (isRepeatEnabled.value) repeatDays.value else emptySet()
+        )
+        
+        reminders.add(newReminder)
+        
+        // Reset Form
+        reminderTitle.value = ""
+        reminderDescription.value = ""
+        selectedDateTime.value = null
+        selectedType.value = "Voice"
+        selectedCategory.value = null
+        isRepeatEnabled.value = false
+        repeatDays.value = emptySet()
+        
+        onSuccess()
     }
 }

@@ -20,6 +20,8 @@ import com.shejan.remindu.ui.screens.HomeScreen
 import com.shejan.remindu.ui.screens.CreateReminderScreen
 import androidx.compose.ui.Alignment
 import com.shejan.remindu.ui.screens.BottomNavigationBar
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.shejan.remindu.ui.viewmodels.RemindUViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,24 +30,32 @@ class MainActivity : ComponentActivity() {
         setContent {
             RemindUTheme {
                 // Navigation State
+                // Navigation State
                 var currentScreen by remember { mutableStateOf("home") }
                 var selectedTab by remember { mutableStateOf("Home") }
-
-
+                
+                // Shared ViewModel
+                val viewModel: RemindUViewModel = viewModel()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                    // Main Content Area
-                   Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                   Box(modifier = Modifier.fillMaxSize()) {
                        Crossfade(targetState = currentScreen, label = "ScreenTransition") { screen ->
                            when (screen) {
-                               "home" -> HomeScreen(onFabClick = { 
-                                   currentScreen = "create"
-                                   selectedTab = "Add"
-                               })
-                               "create" -> CreateReminderScreen(onBackClick = { 
-                                   currentScreen = "home"
-                                   selectedTab = "Home"
-                               })
+                               "home" -> HomeScreen(
+                                   viewModel = viewModel,
+                                   onFabClick = { 
+                                       currentScreen = "create"
+                                       selectedTab = "Add"
+                                   }
+                               )
+                               "create" -> CreateReminderScreen(
+                                   viewModel = viewModel,
+                                   onBackClick = { 
+                                       currentScreen = "home"
+                                       selectedTab = "Home"
+                                   }
+                               )
                            }
                        }
                        
