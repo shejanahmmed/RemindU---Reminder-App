@@ -1,5 +1,6 @@
 package com.shejan.remindu.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,6 +46,8 @@ import java.util.Locale
  * - Dynamic Calendar (java.time)
  * - Scrollable Time Wheels (Hours/Minutes)
  */
+enum class PickerStep { Date, Time }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateTimePickerBottomSheet(
@@ -54,8 +57,9 @@ fun DateTimePickerBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     
     // State for Date and Time
+    var currentStep by remember { mutableStateOf(PickerStep.Date) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var currentMonth by remember { mutableStateOf(YearMonth.now()) } // Separate state for display
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedTime by remember { mutableStateOf(LocalTime.of(8, 0)) } // Default 08:00 AM
 
     ModalBottomSheet(
@@ -68,42 +72,61 @@ fun DateTimePickerBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures { _, _ -> }
-                }
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 40.dp)
         ) {
-            BottomSheetHeader(title = "Select Date & Time")
-
-            MonthHeader(
-                currentMonth = currentMonth,
-                onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
-                onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
+            // Header
+            BottomSheetHeader(
+                title = if (currentStep == PickerStep.Date) "Select Date" else "Select Time"
             )
 
-            CalendarGrid(
-                currentMonth = currentMonth,
-                selectedDate = selectedDate,
-                onDateSelected = { 
-                    selectedDate = it
-                    // Optional: Update view to selected date's month if needed, but usually independent
+            // Content
+            AnimatedContent(
+                targetState = currentStep,
+                label = "PickerStep"
+            ) { step ->
+                Column {
+                    if (step == PickerStep.Date) {
+                        MonthHeader(
+                            currentMonth = currentMonth,
+                            onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
+                            onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
+                        )
+
+                        CalendarGrid(
+                            currentMonth = currentMonth,
+                            selectedDate = selectedDate,
+                            onDateSelected = { selectedDate = it }
+                        )
+                    } else {
+                        // Show selected date context
+                        Text(
+                            text = selectedDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = PrimaryColor,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 24.dp)
+                        )
+                        
+                        DigitalTimePickerWheel(
+                            selectedTime = selectedTime,
+                            onTimeChange = { selectedTime = it }
+                        )
+                    }
                 }
-            )
+            }
 
-            // TimeSelectionSection removed as per request
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            DigitalTimePickerWheel(
-                selectedTime = selectedTime,
-                onTimeChange = { selectedTime = it }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             ConfirmButton(
-                onConfirm = { onConfirm(LocalDateTime.of(selectedDate, selectedTime)) }
+                text = if (currentStep == PickerStep.Date) "Confirm Date" else "Confirm Time",
+                onConfirm = { 
+                    if (currentStep == PickerStep.Date) {
+                        currentStep = PickerStep.Time
+                    } else {
+                        onConfirm(LocalDateTime.of(selectedDate, selectedTime)) 
+                    }
+                }
             )
         }
     }
@@ -449,7 +472,7 @@ private fun AmPmOption(
 }
 
 @Composable
-private fun ConfirmButton(onConfirm: () -> Unit) {
+private fun ConfirmButton(text: String, onConfirm: () -> Unit) {
     Button(
         onClick = onConfirm,
         modifier = Modifier
@@ -462,7 +485,7 @@ private fun ConfirmButton(onConfirm: () -> Unit) {
         shape = CircleShape
     ) {
         Text(
-            text = "Confirm Selection",
+            text = text,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )

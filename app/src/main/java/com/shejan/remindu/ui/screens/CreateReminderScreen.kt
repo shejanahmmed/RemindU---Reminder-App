@@ -1,6 +1,6 @@
 package com.shejan.remindu.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -35,18 +35,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.shejan.remindu.ui.theme.*
+import androidx.compose.ui.platform.LocalConfiguration
+import com.shejan.remindu.ui.viewmodels.CreateReminderViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun CreateReminderScreen(onBackClick: () -> Unit) {
-    var showBottomSheet by remember { mutableStateOf(false) }
-    var showCategoryDialog by remember { mutableStateOf(false) }
-    var editingCategory by remember { mutableStateOf<Category?>(null) }
-    var selectedDateTime by remember { mutableStateOf<LocalDateTime?>(null) }
+fun CreateReminderScreen(
+    onBackClick: () -> Unit,
+    viewModel: CreateReminderViewModel = viewModel()
+) {
+    val showBottomSheet by viewModel.showBottomSheet
+    val showCategoryDialog by viewModel.showCategoryDialog
+    val editingCategory by viewModel.editingCategory
+    val selectedDateTime by viewModel.selectedDateTime
+    val reminderTitle by viewModel.reminderTitle
+    val reminderDescription by viewModel.reminderDescription
     
     // Categories State
-    val categories = remember { mutableStateListOf<Category>() }
+    val categories = viewModel.categories
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -55,48 +63,51 @@ fun CreateReminderScreen(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             CreateHeader()
             Spacer(modifier = Modifier.height(24.dp))
 
-            TitleSection()
+            TitleSection(
+                title = reminderTitle,
+                onTitleChange = viewModel::onTitleChange
+            )
             Spacer(modifier = Modifier.height(32.dp))
-            InputSection()
+            InputSection(
+                description = reminderDescription,
+                onDescriptionChange = viewModel::onDescriptionChange
+            )
             Spacer(modifier = Modifier.height(32.dp))
             CategorySection(
                 categories = categories, 
                 onCreateClick = { 
-                    editingCategory = null
-                    showCategoryDialog = true 
+                    viewModel.onEditCategory(null)
                 },
                 onCategoryClick = { category ->
-                    editingCategory = category
-                    showCategoryDialog = true
+                    viewModel.onEditCategory(category)
                 }
             )
             Spacer(modifier = Modifier.height(32.dp))
             DateTimeSection(
                 selectedDateTime = selectedDateTime,
-                onCick = { showBottomSheet = true },
-                onSuggestionClick = { selectedDateTime = it },
-                onClear = { selectedDateTime = null }
+                onCick = { viewModel.showBottomSheet.value = true },
+                onSuggestionClick = viewModel::onDateTimeSelected,
+                onClear = { viewModel.onDateTimeSelected(null) }
             )
             Spacer(modifier = Modifier.height(32.dp))
             ReminderTypeSection()
             Spacer(modifier = Modifier.height(32.dp))
             RepeatSection()
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(140.dp))
         }
         
         if (showBottomSheet) {
             DateTimePickerBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
+                onDismissRequest = { viewModel.showBottomSheet.value = false },
                 onConfirm = { 
-                    selectedDateTime = it
-                    showBottomSheet = false 
+                    viewModel.onDateTimeSelected(it)
+                    viewModel.showBottomSheet.value = false 
                 }
             )
         }
@@ -104,21 +115,20 @@ fun CreateReminderScreen(onBackClick: () -> Unit) {
         if (showCategoryDialog) {
             CreateCategoryDialog(
                 existingCategory = editingCategory,
-                onDismiss = { showCategoryDialog = false },
+                onDismiss = { viewModel.showCategoryDialog.value = false },
                 onSaveCategory = { updatedCategory ->
                     if (editingCategory != null) {
-                        val index = categories.indexOf(editingCategory)
-                        if (index != -1) categories[index] = updatedCategory
+                        viewModel.updateCategory(editingCategory!!, updatedCategory)
                     } else {
-                        categories.add(updatedCategory)
+                        viewModel.addCategory(updatedCategory)
                     }
-                    showCategoryDialog = false
+                    viewModel.showCategoryDialog.value = false
                 },
                 onRemoveCategory = {
                     if (editingCategory != null) {
-                        categories.remove(editingCategory)
+                        viewModel.removeCategory(editingCategory!!)
                     }
-                    showCategoryDialog = false
+                    viewModel.showCategoryDialog.value = false
                 }
             )
         }
@@ -131,7 +141,7 @@ fun CreateHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight() // Allow height to expand for text
-            .padding(vertical = 8.dp), // Add some breathing room
+            .padding(vertical = 8.dp, horizontal = 24.dp), // Add some breathing room
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -173,8 +183,8 @@ fun CreateHeader() {
 
 
 @Composable
-fun TitleSection() {
-    Column {
+fun TitleSection(title: String, onTitleChange: (String) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
             text = "Reminder Title",
             style = MaterialTheme.typography.labelLarge,
@@ -184,8 +194,8 @@ fun TitleSection() {
         )
         
         TextField(
-            value = "",
-            onValueChange = {},
+            value = title,
+            onValueChange = onTitleChange,
             placeholder = { Text("Add a title", color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.5f)) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -205,8 +215,8 @@ fun TitleSection() {
 }
 
 @Composable
-fun InputSection() {
-    Column {
+fun InputSection(description: String, onDescriptionChange: (String) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
             text = "What do you want to remember?",
             style = MaterialTheme.typography.labelLarge,
@@ -216,8 +226,8 @@ fun InputSection() {
         )
         
         TextField(
-            value = "",
-            onValueChange = {},
+            value = description,
+            onValueChange = onDescriptionChange,
             placeholder = { Text("Type here ...", color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.5f)) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -243,12 +253,13 @@ fun CategorySection(categories: List<Category>, onCreateClick: () -> Unit, onCat
             text = "Category",
              style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 32.dp, bottom = 12.dp),
              color = MaterialTheme.colorScheme.onBackground
         )
         
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(categories) { category ->
@@ -333,7 +344,7 @@ fun DateTimeSection(
             text = "Date & Time",
              style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 32.dp, bottom = 12.dp),
              color = MaterialTheme.colorScheme.onBackground
         )
         
@@ -341,6 +352,7 @@ fun DateTimeSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 24.dp)
                 .drawBehind {
                    val stroke = Stroke(
                        width = 4f,
@@ -435,8 +447,15 @@ fun DateTimeSection(
 
         // Suggestions List (Only show if no date is selected)
         if (selectedDateTime == null) {
+            val configuration = LocalConfiguration.current
+            val screenWidth = configuration.screenWidthDp.dp
+            // Calculate width: (Total Width - Start Padding - Gap - End Padding) / 2
+            // 24.dp (Start) + 12.dp (Gap) + 24.dp (End) = 60.dp
+            val itemWidth = (screenWidth - 60.dp) / 2
+
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Today 6 PM (or +1h if late)
@@ -450,7 +469,7 @@ fun DateTimeSection(
                         time = time.format(DateTimeFormatter.ofPattern("h:mm a")),
                         isSelected = false,
                         modifier = Modifier
-                            .fillParentMaxWidth(0.46f)
+                            .width(itemWidth)
                             .clickable { onSuggestionClick(time) }
                     )
                 }
@@ -463,7 +482,7 @@ fun DateTimeSection(
                         time = "9:00 AM",
                         isSelected = false,
                         modifier = Modifier
-                             .fillParentMaxWidth(0.46f)
+                             .width(itemWidth)
                             .clickable { onSuggestionClick(tmrw9am) }
                     )
                 }
@@ -481,7 +500,7 @@ fun DateTimeSection(
                         time = weekend.format(DateTimeFormatter.ofPattern("EEE h:mm a")),
                         isSelected = false,
                         modifier = Modifier
-                             .fillParentMaxWidth(0.46f)
+                             .width(itemWidth)
                             .clickable { onSuggestionClick(weekend) }
                     )
                 }
@@ -499,7 +518,7 @@ fun DateTimeSection(
                         time = nextWeek.format(DateTimeFormatter.ofPattern("EEE h:mm a")),
                         isSelected = false,
                         modifier = Modifier
-                             .fillParentMaxWidth(0.46f)
+                             .width(itemWidth)
                             .clickable { onSuggestionClick(nextWeek) }
                     )
                 }
@@ -512,7 +531,7 @@ fun DateTimeSection(
                         time = in1Hour.format(DateTimeFormatter.ofPattern("h:mm a")),
                         isSelected = false,
                         modifier = Modifier
-                             .fillParentMaxWidth(0.46f)
+                             .width(itemWidth)
                             .clickable { onSuggestionClick(in1Hour) }
                     )
                 }
@@ -556,7 +575,7 @@ fun DateTimeCard(title: String, time: String, isSelected: Boolean, modifier: Mod
 fun ReminderTypeSection() {
     var selectedType by remember { mutableStateOf("Voice") }
 
-    Column {
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
             text = "Reminder Type",
              style = MaterialTheme.typography.labelLarge,
@@ -709,37 +728,214 @@ fun VoiceRecordingCard() {
 
 @Composable
 fun RepeatSection() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Refresh, contentDescription = "Repeat", tint = MaterialTheme.colorScheme.onTertiary)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "Repeat Reminder",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
+    var isRepeatEnabled by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
+    // Store selected days (Set of Int: 1=Mon, 7=Sun)
+    var selectedDays by remember { mutableStateOf(setOf<Int>()) }
+
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        // Toggle Card
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(2.dp, RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Repeat, contentDescription = "Repeat", tint = MaterialTheme.colorScheme.onTertiary)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Repeat Reminder",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    if (isRepeatEnabled && selectedDays.isNotEmpty()) {
+                        Text(
+                           text = getRepeatSummary(selectedDays),
+                           style = MaterialTheme.typography.labelSmall,
+                           color = PrimaryColor
+                        )
+                    }
+                }
+            }
+            
+            Switch(
+                checked = isRepeatEnabled,
+                onCheckedChange = { 
+                    isRepeatEnabled = it 
+                    if (it) {
+                        showDialog = true
+                    } else {
+                        selectedDays = emptySet()
+                    }
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = PrimaryColor,
+                    checkedBorderColor = Color.Transparent,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Color(0xFFE9E9EA),
+                    uncheckedBorderColor = Color.Transparent
+                )
             )
         }
-        
-        Switch(
-            checked = true,
-            onCheckedChange = {},
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = PrimaryColor,
-                uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.LightGray
-            )
+    }
+    
+    if (showDialog) {
+        RepeatSelectionDialog(
+            initialSelection = selectedDays,
+            onDismiss = { 
+                showDialog = false 
+                if (selectedDays.isEmpty()) isRepeatEnabled = false
+            },
+            onConfirm = { days ->
+                selectedDays = days
+                showDialog = false
+                isRepeatEnabled = days.isNotEmpty()
+            }
         )
     }
+}
+
+@Composable
+fun RepeatSelectionDialog(
+    initialSelection: Set<Int>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<Int>) -> Unit
+) {
+    var currentSelection by remember { mutableStateOf(initialSelection) }
+    val days = listOf("M", "T", "W", "T", "F", "S", "S") // 1 to 7
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(28.dp))
+                .padding(24.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Repeat Every",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Select All Button
+                val allSelected = currentSelection.size == 7
+                Surface(
+                    onClick = {
+                        currentSelection = if (allSelected) emptySet() else (1..7).toSet()
+                    },
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color(0xFFEBE7F3), // Matte Lavender
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = if (allSelected) PrimaryColor else PrimaryColor.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Select All Days",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryColor
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Days Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    days.forEachIndexed { index, dayLabel ->
+                        val dayId = index + 1
+                        val isSelected = currentSelection.contains(dayId)
+                        val bgColor = if (isSelected) PrimaryColor else Color(0xFFF1F1F5) // Matte Gray
+                        val textColor = if (isSelected) Color.White else Color.Gray
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .shadow(if (isSelected) 4.dp else 0.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.3f))
+                                .clip(CircleShape)
+                                .background(bgColor)
+                                .clickable {
+                                    currentSelection = if (isSelected) {
+                                        currentSelection - dayId
+                                    } else {
+                                        currentSelection + dayId
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = dayLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                // Confirm Button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .shadow(8.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.3f))
+                        .clip(CircleShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(PrimaryColor, Color(0xFF7C41F2))
+                            )
+                        )
+                        .clickable { onConfirm(currentSelection) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Confirm",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+fun getRepeatSummary(days: Set<Int>): String {
+    if (days.size == 7) return "Every Day"
+    if (days.isEmpty()) return ""
+    // Basic formatting: Mon, Wed, Fri
+    val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") // 1-based index mapped to 0-6
+    return days.sorted().joinToString(", ") { dayNames[it - 1] }
 }
 
 
