@@ -55,6 +55,7 @@ fun DateTimePickerBottomSheet(
     
     // State for Date and Time
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) } // Separate state for display
     var selectedTime by remember { mutableStateOf(LocalTime.of(8, 0)) } // Default 08:00 AM
 
     ModalBottomSheet(
@@ -76,14 +77,18 @@ fun DateTimePickerBottomSheet(
             BottomSheetHeader(title = "Select Date & Time")
 
             MonthHeader(
-                currentMonthValues = selectedDate,
-                onPreviousMonth = { selectedDate = selectedDate.minusMonths(1) },
-                onNextMonth = { selectedDate = selectedDate.plusMonths(1) }
+                currentMonth = currentMonth,
+                onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
+                onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
             )
 
             CalendarGrid(
+                currentMonth = currentMonth,
                 selectedDate = selectedDate,
-                onDateSelected = { selectedDate = it }
+                onDateSelected = { 
+                    selectedDate = it
+                    // Optional: Update view to selected date's month if needed, but usually independent
+                }
             )
 
             // TimeSelectionSection removed as per request
@@ -124,7 +129,7 @@ private fun BottomSheetHeader(title: String) {
 
 @Composable
 private fun MonthHeader(
-    currentMonthValues: LocalDate,
+    currentMonth: YearMonth,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
@@ -146,7 +151,7 @@ private fun MonthHeader(
         }
 
         Text(
-            text = currentMonthValues.format(formatter),
+            text = currentMonth.format(formatter),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -164,15 +169,16 @@ private fun MonthHeader(
 
 @Composable
 private fun CalendarGrid(
+    currentMonth: YearMonth,
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val weekDays = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
     
     // Calculate calendar days
-    val yearMonth = YearMonth.from(selectedDate)
-    val daysInMonth = yearMonth.lengthOfMonth()
-    val firstOfMonth = selectedDate.withDayOfMonth(1)
+    // Use currentMonth for generation
+    val daysInMonth = currentMonth.lengthOfMonth()
+    val firstOfMonth = currentMonth.atDay(1)
     
     // Calculate empty header cells
     val emptyCells = if (firstOfMonth.dayOfWeek.value == 7) 0 else firstOfMonth.dayOfWeek.value
@@ -213,8 +219,8 @@ private fun CalendarGrid(
                         Box(modifier = Modifier.weight(1f).aspectRatio(1f))
                     } else if (index < totalSlots) {
                         val dayNumber = index - emptyCells + 1
-                        val date = selectedDate.withDayOfMonth(dayNumber)
-                        val isSelected = date == selectedDate
+                        val date = currentMonth.atDay(dayNumber)
+                        val isSelected = date == selectedDate // Highlight only if matches selectedDate
                         
                         Box(modifier = Modifier.weight(1f)) {
                             CalendarDayItem(

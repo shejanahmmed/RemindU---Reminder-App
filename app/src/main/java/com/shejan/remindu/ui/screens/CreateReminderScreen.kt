@@ -41,7 +41,12 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CreateReminderScreen(onBackClick: () -> Unit) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    var editingCategory by remember { mutableStateOf<Category?>(null) }
     var selectedDateTime by remember { mutableStateOf<LocalDateTime?>(null) }
+    
+    // Categories State
+    val categories = remember { mutableStateListOf<Category>() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -61,11 +66,23 @@ fun CreateReminderScreen(onBackClick: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
             InputSection()
             Spacer(modifier = Modifier.height(32.dp))
-            CategorySection()
+            CategorySection(
+                categories = categories, 
+                onCreateClick = { 
+                    editingCategory = null
+                    showCategoryDialog = true 
+                },
+                onCategoryClick = { category ->
+                    editingCategory = category
+                    showCategoryDialog = true
+                }
+            )
             Spacer(modifier = Modifier.height(32.dp))
             DateTimeSection(
                 selectedDateTime = selectedDateTime,
-                onCick = { showBottomSheet = true }
+                onCick = { showBottomSheet = true },
+                onSuggestionClick = { selectedDateTime = it },
+                onClear = { selectedDateTime = null }
             )
             Spacer(modifier = Modifier.height(32.dp))
             ReminderTypeSection()
@@ -80,6 +97,28 @@ fun CreateReminderScreen(onBackClick: () -> Unit) {
                 onConfirm = { 
                     selectedDateTime = it
                     showBottomSheet = false 
+                }
+            )
+        }
+        
+        if (showCategoryDialog) {
+            CreateCategoryDialog(
+                existingCategory = editingCategory,
+                onDismiss = { showCategoryDialog = false },
+                onSaveCategory = { updatedCategory ->
+                    if (editingCategory != null) {
+                        val index = categories.indexOf(editingCategory)
+                        if (index != -1) categories[index] = updatedCategory
+                    } else {
+                        categories.add(updatedCategory)
+                    }
+                    showCategoryDialog = false
+                },
+                onRemoveCategory = {
+                    if (editingCategory != null) {
+                        categories.remove(editingCategory)
+                    }
+                    showCategoryDialog = false
                 }
             )
         }
@@ -198,7 +237,7 @@ fun InputSection() {
 }
 
 @Composable
-fun CategorySection() {
+fun CategorySection(categories: List<Category>, onCreateClick: () -> Unit, onCategoryClick: (Category) -> Unit) {
     Column {
         Text(
             text = "Category",
@@ -212,35 +251,43 @@ fun CategorySection() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { CategoryChip(label = "Study", icon = Icons.Rounded.Edit, isSelected = false, color = MatteBlue) }
-            item { CategoryChip(label = "Work", icon = Icons.Rounded.Email, isSelected = false, color = MattePeach) }
-            item { CategoryChip(label = "Health", icon = Icons.Rounded.Favorite, isSelected = false, color = MatteMint) }
+            items(categories) { category ->
+                CategoryChip(
+                    label = category.name, 
+                    icon = category.icon, 
+                    isSelected = false, 
+                    color = category.color,
+                    onClick = { onCategoryClick(category) }
+                )
+            }
             
-            item {
-                Surface(
-                    color = SecondaryColor,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier
-                        .height(44.dp)
-                        .clickable { /* TODO: Add Category Logic */ }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+            if (categories.isEmpty()) {
+                item {
+                    Surface(
+                        color = SecondaryColor,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .height(44.dp)
+                            .clickable { onCreateClick() }
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = "Add Category",
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Add",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = "Add Category",
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Create",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     }
                 }
             }
@@ -249,7 +296,7 @@ fun CategorySection() {
 }
 
 @Composable
-fun CategoryChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean, color: Color) {
+fun CategoryChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean, color: Color, onClick: () -> Unit) {
     val bgColor = if (isSelected) color else color
     val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
     val iconColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
@@ -257,7 +304,10 @@ fun CategoryChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageV
     Surface(
         color = bgColor,
         shape = RoundedCornerShape(50),
-        modifier = Modifier.height(44.dp).let { if(isSelected) it.shadow(8.dp, RoundedCornerShape(50), spotColor = color) else it }
+        modifier = Modifier
+            .height(44.dp)
+            .shadow(if(isSelected) 8.dp else 0.dp, RoundedCornerShape(50), spotColor = color)
+            .clickable { onClick() }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -274,7 +324,9 @@ fun CategoryChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageV
 @Composable
 fun DateTimeSection(
     selectedDateTime: LocalDateTime?,
-    onCick: () -> Unit
+    onCick: () -> Unit,
+    onSuggestionClick: (LocalDateTime) -> Unit,
+    onClear: () -> Unit
 ) {
     Column {
         Text(
@@ -342,42 +394,129 @@ fun DateTimeSection(
                 }
                 
                 // Trailing Icons
-                Icon(
-                    imageVector = Icons.Rounded.DateRange, 
-                    contentDescription = null, 
-                    tint = PrimaryColor.copy(alpha = 0.5f),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Icon(
-                    imageVector = Icons.Rounded.Notifications, 
-                    contentDescription = null, 
-                    tint = PrimaryColor.copy(alpha = 0.5f),
-                    modifier = Modifier.size(20.dp)
-                )
+                if (selectedDateTime != null) {
+                    Surface(
+                        onClick = onClear,
+                        shape = CircleShape,
+                        color = Color(0xFFFFE5E5),
+                        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.1f)),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = "Clear",
+                                tint = Color.Red,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Row {
+                        Icon(
+                            imageVector = Icons.Rounded.DateRange, 
+                            contentDescription = null, 
+                            tint = PrimaryColor.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.Notifications, 
+                            contentDescription = null, 
+                            tint = PrimaryColor.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Today Card
-            DateTimeCard(
-                title = "TODAY",
-                time = "6:00 PM",
-                isSelected = true,
-                modifier = Modifier.weight(1f)
-            )
-             // Tomorrow Card
-            DateTimeCard(
-                title = "TOMORROW",
-                time = "9:00 AM",
-                isSelected = false,
-                modifier = Modifier.weight(1f)
-            )
+        // Suggestions List (Only show if no date is selected)
+        if (selectedDateTime == null) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Today 6 PM (or +1h if late)
+                item {
+                    val now = LocalDateTime.now()
+                    val today6pm = now.withHour(18).withMinute(0)
+                    val time = if (now.isAfter(today6pm)) now.plusHours(1) else today6pm
+                    
+                    DateTimeCard(
+                        title = "TODAY",
+                        time = time.format(DateTimeFormatter.ofPattern("h:mm a")),
+                        isSelected = false,
+                        modifier = Modifier
+                            .fillParentMaxWidth(0.46f)
+                            .clickable { onSuggestionClick(time) }
+                    )
+                }
+                
+                // Tomorrow 9 AM
+                item {
+                    val tmrw9am = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0)
+                    DateTimeCard(
+                        title = "TOMORROW",
+                        time = "9:00 AM",
+                        isSelected = false,
+                        modifier = Modifier
+                             .fillParentMaxWidth(0.46f)
+                            .clickable { onSuggestionClick(tmrw9am) }
+                    )
+                }
+
+                // Weekend (Next Saturday 10 AM)
+                item {
+                    var weekend = LocalDateTime.now().withHour(10).withMinute(0)
+                    while (weekend.dayOfWeek != java.time.DayOfWeek.SATURDAY) {
+                        weekend = weekend.plusDays(1)
+                    }
+                    if (weekend.isBefore(LocalDateTime.now())) weekend = weekend.plusWeeks(1)
+
+                    DateTimeCard(
+                        title = "WEEKEND",
+                        time = weekend.format(DateTimeFormatter.ofPattern("EEE h:mm a")),
+                        isSelected = false,
+                        modifier = Modifier
+                             .fillParentMaxWidth(0.46f)
+                            .clickable { onSuggestionClick(weekend) }
+                    )
+                }
+                
+                // Next Week (Next Monday 9 AM)
+                item {
+                    var nextWeek = LocalDateTime.now().withHour(9).withMinute(0)
+                    while (nextWeek.dayOfWeek != java.time.DayOfWeek.MONDAY) {
+                         nextWeek = nextWeek.plusDays(1)
+                    }
+                    if (nextWeek.isBefore(LocalDateTime.now())) nextWeek = nextWeek.plusWeeks(1)
+                    
+                    DateTimeCard(
+                        title = "NEXT WEEK",
+                        time = nextWeek.format(DateTimeFormatter.ofPattern("EEE h:mm a")),
+                        isSelected = false,
+                        modifier = Modifier
+                             .fillParentMaxWidth(0.46f)
+                            .clickable { onSuggestionClick(nextWeek) }
+                    )
+                }
+                
+                // In 1 Hour
+                item {
+                    val in1Hour = LocalDateTime.now().plusHours(1)
+                    DateTimeCard(
+                        title = "IN 1 HOUR",
+                        time = in1Hour.format(DateTimeFormatter.ofPattern("h:mm a")),
+                        isSelected = false,
+                        modifier = Modifier
+                             .fillParentMaxWidth(0.46f)
+                            .clickable { onSuggestionClick(in1Hour) }
+                    )
+                }
+            }
         }
     }
 }
@@ -605,3 +744,304 @@ fun RepeatSection() {
 
 
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateCategoryDialog(
+    existingCategory: Category? = null,
+    onDismiss: () -> Unit, 
+    onSaveCategory: (Category) -> Unit,
+    onRemoveCategory: () -> Unit = {}
+) {
+    var categoryName by remember { mutableStateOf(existingCategory?.name ?: "") }
+    var selectedIcon by remember { mutableStateOf(existingCategory?.icon) }
+    var selectedColor by remember { mutableStateOf(existingCategory?.color) }
+    
+
+    
+    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false // Allow full width for custom styling
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f)) // Overlay blur/dim
+                .clickable { onDismiss() }, // Click outside to dismiss
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier
+                    .width(360.dp) // max-w-sm
+                    .padding(24.dp)
+                    .clickable(enabled = false) {}, // Prevent click through
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (existingCategory != null) "Edit Category" else "New Category",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    
+                    if (showError) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    // Input
+                    TextField(
+                        value = categoryName,
+                        onValueChange = { 
+                            categoryName = it 
+                            showError = false // Clear error on interaction
+                        },
+                        placeholder = { Text("Category Name", color = Color.Gray) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp)),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // ICON Section
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "ICON",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+                        )
+                        
+                        var isExpanded by remember { mutableStateOf(false) }
+                        
+                        val allIcons = listOf(
+                            // Common Activities
+                            Icons.Rounded.FitnessCenter, Icons.Rounded.ShoppingBag, Icons.Rounded.Book, Icons.Rounded.Flight,
+                            Icons.Rounded.Palette, Icons.Rounded.Restaurant, Icons.Rounded.Movie,
+                            // Work & Study
+                            Icons.Rounded.Work, Icons.Rounded.School, Icons.Rounded.Computer, Icons.Rounded.BorderColor,
+                            // Personal & Health
+                            Icons.Rounded.Favorite, Icons.Rounded.Bedtime, Icons.Rounded.Spa, Icons.Rounded.Medication,
+                            // Home & Family
+                            Icons.Rounded.Home, Icons.Rounded.ChildCare, Icons.Rounded.Pets, Icons.Rounded.Kitchen,
+                            // Finance & shopping
+                            Icons.Rounded.AttachMoney, Icons.Rounded.ShoppingCart, Icons.Rounded.CreditCard, Icons.Rounded.Receipt,
+                            // Travel & Transport
+                            Icons.Rounded.DirectionsCar, Icons.Rounded.DirectionsBike, Icons.Rounded.Map, Icons.Rounded.Commute,
+                            // Misc
+                            Icons.Rounded.MusicNote, Icons.Rounded.CameraAlt, Icons.Rounded.SportsEsports, Icons.Rounded.Build
+                        )
+                        
+                        val displayedIcons = if (isExpanded) allIcons else allIcons.take(7)
+                        
+                        // Calculate grid height:
+                        // Collapsed: 2 rows (approx 130dp)
+                        // Expanded: Show exactly 3 rows (approx 185dp) to avoid cutting off 4th row
+                        val gridHeight = if (isExpanded) 185.dp else 130.dp
+                        
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.height(gridHeight)
+                        ) {
+                            items(displayedIcons.size) { index ->
+                                val icon = displayedIcons[index]
+                                val isIconSelected = selectedIcon == icon
+                                val borderColor = if (isIconSelected) Color.Black.copy(alpha = 0.5f) else Color.Transparent
+
+                                Box(
+                                    modifier = Modifier
+                                        .aspectRatio(1f)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                                        .border(2.dp, borderColor, RoundedCornerShape(16.dp)) // Selected Border
+                                        .clickable { 
+                                            selectedIcon = icon
+                                            showError = false // Clear error on interaction
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if(isIconSelected) Color.Black else Color.Gray,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            
+                            // "More" button (only show if not expanded and we have more icons)
+                            if (!isExpanded) {
+                                item { 
+                                     Box(
+                                        modifier = Modifier
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                                            .clickable { isExpanded = true },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.MoreHoriz,
+                                            contentDescription = "More",
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            } else {
+                                item { 
+                                     Box(
+                                        modifier = Modifier
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                                            .clickable { isExpanded = false },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.KeyboardArrowUp,
+                                            contentDescription = "Collapse",
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // COLOR Section
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "COLOR",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+                        )
+                        
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            listOf(MatteMint, MattePeach, MatteLavender, MatteBlue).forEach { color ->
+                                val isColorSelected = selectedColor == color
+                                val borderColor = if (isColorSelected) Color.Black.copy(alpha = 0.5f) else Color.Transparent
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .border(2.dp, borderColor, CircleShape) // Selected Border
+                                        .clickable { 
+                                            selectedColor = color 
+                                            showError = false // Clear error on interaction
+                                        }
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    // Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        TextButton(
+                            onClick = { 
+                                if (existingCategory != null) onRemoveCategory() else onDismiss()
+                            },
+                            modifier = Modifier.weight(1f).height(56.dp)
+                        ) {
+                            Text(
+                                if (existingCategory != null) "Remove" else "Cancel",
+                                color = Color.Gray,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        
+                        Button(
+                            onClick = { 
+                                when {
+                                    categoryName.isEmpty() -> {
+                                        errorMessage = "Please enter a category name."
+                                        showError = true
+                                    }
+                                    selectedIcon == null -> {
+                                        errorMessage = "Please select an icon for the category."
+                                        showError = true
+                                    }
+                                    selectedColor == null -> {
+                                        errorMessage = "Please select a color for the category."
+                                        showError = true
+                                    }
+                                    else -> {
+                                       onSaveCategory(Category(categoryName, selectedIcon!!, selectedColor!!))
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(2f)
+                                .height(56.dp)
+                                .shadow(8.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryColor
+                            ),
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                if (existingCategory != null) "Save Changes" else "Add Category",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+
+}
+
+data class Category(
+    val name: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val color: Color
+)
