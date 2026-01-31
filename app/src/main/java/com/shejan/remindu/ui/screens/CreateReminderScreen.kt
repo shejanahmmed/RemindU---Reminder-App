@@ -3,6 +3,8 @@ package com.shejan.remindu.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,14 +52,14 @@ fun CreateReminderScreen(
     val showCategoryDialog by viewModel.showCategoryDialog
     val editingCategory by viewModel.editingCategory
     val selectedDateTime by viewModel.selectedDateTime
-    val reminderTitle by viewModel.reminderTitle
+
     val reminderDescription by viewModel.reminderDescription
     
     // Categories State
     val categories = viewModel.categories
 
     Scaffold(
-        containerColor = Color(0xFFeedec2)
+        containerColor = SoftBeige
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -69,22 +71,23 @@ fun CreateReminderScreen(
             CreateHeader()
             Spacer(modifier = Modifier.height(24.dp))
 
-            TitleSection(
-                title = reminderTitle,
-                onTitleChange = viewModel::onTitleChange
-            )
-            Spacer(modifier = Modifier.height(32.dp))
+
             InputSection(
                 description = reminderDescription,
                 onDescriptionChange = viewModel::onDescriptionChange
             )
             Spacer(modifier = Modifier.height(32.dp))
+            val selectedCategory by viewModel.selectedCategory
             CategorySection(
-                categories = categories, 
+                categories = categories,
+                selectedCategory = selectedCategory,
                 onCreateClick = { 
                     viewModel.onEditCategory(null)
                 },
-                onCategoryClick = { category ->
+                onCategorySelect = { category ->
+                    viewModel.onCategorySelected(category)
+                },
+                onCategoryEdit = { category ->
                     viewModel.onEditCategory(category)
                 }
             )
@@ -111,9 +114,9 @@ fun CreateReminderScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .shadow(4.dp, RoundedCornerShape(28.dp), spotColor = Color(0xFFf89f24).copy(alpha = 0.5f))
+                        .shadow(4.dp, RoundedCornerShape(28.dp), spotColor = MatteTerracotta.copy(alpha = 0.5f))
                         .clip(RoundedCornerShape(28.dp))
-                        .background(Color(0xFFf89f24))
+                        .background(MatteTerracotta)
                         .clickable {
                             viewModel.saveReminder(onSuccess = onBackClick)
                         },
@@ -127,7 +130,7 @@ fun CreateReminderScreen(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(120.dp)) // Extra space to scroll past nav bar
         }
         
         if (showBottomSheet) {
@@ -150,6 +153,7 @@ fun CreateReminderScreen(
                     } else {
                         viewModel.addCategory(updatedCategory)
                     }
+                    viewModel.onCategorySelected(updatedCategory)
                     viewModel.showCategoryDialog.value = false
                 },
                 onRemoveCategory = {
@@ -177,12 +181,12 @@ fun CreateHeader() {
                 text = "New Reminder",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = CharcoalBrown
             )
             Text(
                 text = "Stay organized & never miss a beat.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onTertiary
+                color = CharcoalBrown.copy(alpha = 0.7f)
             )
         }
     }
@@ -190,37 +194,7 @@ fun CreateHeader() {
 
 
 
-@Composable
-fun TitleSection(title: String, onTitleChange: (String) -> Unit) {
-    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-        Text(
-            text = "Reminder Title",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
-             color = MaterialTheme.colorScheme.onBackground
-        )
-        
-        TextField(
-            value = title,
-            onValueChange = onTitleChange,
-            placeholder = { Text("Add a title", color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.5f)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(24.dp))
-                .background(Color(0xFFfefdf6), RoundedCornerShape(24.dp)),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFfefdf6),
-                unfocusedContainerColor = Color(0xFFfefdf6),
-                disabledContainerColor = Color(0xFFfefdf6),
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
-            shape = RoundedCornerShape(24.dp),
-            singleLine = true
-        )
-    }
-}
+
 
 @Composable
 fun InputSection(description: String, onDescriptionChange: (String) -> Unit) {
@@ -230,39 +204,48 @@ fun InputSection(description: String, onDescriptionChange: (String) -> Unit) {
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
-             color = MaterialTheme.colorScheme.onBackground
+             color = CharcoalBrown
         )
         
         TextField(
             value = description,
             onValueChange = onDescriptionChange,
-            placeholder = { Text("Type here ...", color = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.5f)) },
+            placeholder = { Text("Type here ...", color = MutedTaupe) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(140.dp)
-                .shadow(2.dp, RoundedCornerShape(24.dp))
-                .background(Color(0xFFfefdf6), RoundedCornerShape(24.dp)),
+                .border(1.dp, SubtleBorder, RoundedCornerShape(24.dp))
+                .background(WarmOffWhite, RoundedCornerShape(24.dp)),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFfefdf6),
-                unfocusedContainerColor = Color(0xFFfefdf6),
-                disabledContainerColor = Color(0xFFfefdf6),
+                focusedContainerColor = WarmOffWhite,
+                unfocusedContainerColor = WarmOffWhite,
+                disabledContainerColor = WarmOffWhite,
                 focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
+                unfocusedIndicatorColor = Color.Transparent,
+                focusedTextColor = CharcoalBrown,
+                unfocusedTextColor = CharcoalBrown
             ),
             shape = RoundedCornerShape(24.dp)
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CategorySection(categories: List<Category>, onCreateClick: () -> Unit, onCategoryClick: (Category) -> Unit) {
+fun CategorySection(
+    categories: List<Category>, 
+    selectedCategory: Category?,
+    onCreateClick: () -> Unit,
+    onCategorySelect: (Category) -> Unit,
+    onCategoryEdit: (Category) -> Unit
+) {
     Column {
         Text(
             text = "Category",
              style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 32.dp, bottom = 12.dp),
-             color = MaterialTheme.colorScheme.onBackground
+             color = CharcoalBrown
         )
         
         LazyRow(
@@ -274,37 +257,42 @@ fun CategorySection(categories: List<Category>, onCreateClick: () -> Unit, onCat
                 CategoryChip(
                     label = category.name, 
                     icon = category.icon, 
-                    isSelected = false, 
+                    isSelected = category == selectedCategory, 
                     color = category.color,
-                    onClick = { onCategoryClick(category) }
+                    onClick = { onCategorySelect(category) },
+                    onLongClick = { onCategoryEdit(category) }
                 )
             }
             
-            item {
-                Surface(
-                    color = SecondaryColor,
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier
-                        .height(44.dp)
-                        .clickable { onCreateClick() }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+            // Show Create Button only if no categories exist
+            if (categories.isEmpty()) {
+                item {
+                    Surface(
+                        color = MatteTerracotta,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .height(44.dp)
+                            .shadow(4.dp, RoundedCornerShape(50), spotColor = MatteTerracotta.copy(alpha = 0.5f))
+                            .clickable { onCreateClick() }
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = "Add Category",
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Create",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = "Add Category",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Create",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -312,19 +300,32 @@ fun CategorySection(categories: List<Category>, onCreateClick: () -> Unit, onCat
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CategoryChip(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, isSelected: Boolean, color: Color, onClick: () -> Unit) {
-    val bgColor = if (isSelected) color else color
-    val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
-    val iconColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
+fun CategoryChip(
+    label: String, 
+    icon: androidx.compose.ui.graphics.vector.ImageVector, 
+    isSelected: Boolean, 
+    color: Color, 
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val bgColor = if (isSelected) color else color.copy(alpha = 0.15f)
+    val contentColor = if (isSelected) Color.White else CharcoalBrown
+    val iconColor = if (isSelected) Color.White else color
+    val borderStroke = if (isSelected) null else BorderStroke(1.dp, color.copy(alpha = 0.3f))
     
     Surface(
         color = bgColor,
         shape = RoundedCornerShape(50),
+        border = borderStroke,
         modifier = Modifier
             .height(44.dp)
             .shadow(if(isSelected) 8.dp else 0.dp, RoundedCornerShape(50), spotColor = color)
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -351,7 +352,7 @@ fun DateTimeSection(
              style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 32.dp, bottom = 12.dp),
-             color = MaterialTheme.colorScheme.onBackground
+             color = CharcoalBrown
         )
         
         // Pick Date & Time Card
@@ -365,12 +366,12 @@ fun DateTimeSection(
                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
                    )
                    drawRoundRect(
-                       color = PrimaryColor.copy(alpha = 0.5f),
+                       color = MatteTerracotta.copy(alpha = 0.4f),
                        style = stroke,
                        cornerRadius = CornerRadius(24.dp.toPx())
                    )
                 }
-                .background(MatteLavender, RoundedCornerShape(24.dp))
+                .background(WarmOffWhite, RoundedCornerShape(24.dp))
                 .clip(RoundedCornerShape(24.dp))
                 .clickable { onCick() }
                 .padding(16.dp)
@@ -382,14 +383,14 @@ fun DateTimeSection(
                 // Icon Circle
                 Surface(
                     shape = CircleShape, 
-                    color = Color.White, 
+                    color = MutedClay, 
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                          Icon(
                              imageVector = Icons.Rounded.DateRange, 
                              contentDescription = "Calendar",
-                             tint = PrimaryColor,
+                             tint = MatteTerracotta,
                              modifier = Modifier.size(28.dp)
                          )
                     }
@@ -401,13 +402,13 @@ fun DateTimeSection(
                      Text(
                          text = selectedDateTime?.format(DateTimeFormatter.ofPattern("MMM dd, hh:mm a")) ?: "Pick Date & Time", 
                          style = MaterialTheme.typography.bodyLarge, 
-                         color = PrimaryColor, 
+                         color = MatteTerracotta, 
                          fontWeight = FontWeight.Bold
                      )
                      Text(
                          text = if (selectedDateTime != null) "Time set" else "Customize your schedule", 
                          style = MaterialTheme.typography.bodyMedium, 
-                         color = PrimaryColor.copy(alpha = 0.6f)
+                         color = MutedTaupe
                      )
                 }
                 
@@ -434,14 +435,14 @@ fun DateTimeSection(
                         Icon(
                             imageVector = Icons.Rounded.DateRange, 
                             contentDescription = null, 
-                            tint = PrimaryColor.copy(alpha = 0.5f),
+                            tint = MutedTaupe,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Icon(
                             imageVector = Icons.Rounded.Notifications, 
                             contentDescription = null, 
-                            tint = PrimaryColor.copy(alpha = 0.5f),
+                            tint = MutedTaupe,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -548,14 +549,13 @@ fun DateTimeSection(
 
 @Composable
 fun DateTimeCard(title: String, time: String, isSelected: Boolean, modifier: Modifier = Modifier) {
-    val borderColor = if (isSelected) PrimaryColor.copy(alpha = 0.4f) else Color.Transparent
-    val titleColor = if (isSelected) PrimaryColor else MaterialTheme.colorScheme.onTertiary
+    val borderColor = if (isSelected) MatteTerracotta.copy(alpha = 0.6f) else SubtleBorder
+    val titleColor = if (isSelected) MatteTerracotta else MutedTaupe
     
     Column(
         modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
-            .border(2.dp, borderColor, RoundedCornerShape(24.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(24.dp))
+            .background(WarmOffWhite, RoundedCornerShape(24.dp))
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -572,14 +572,14 @@ fun DateTimeCard(title: String, time: String, isSelected: Boolean, modifier: Mod
             text = time,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = CharcoalBrown
         )
     }
 }
 
 @Composable
 fun ReminderTypeSection() {
-    var selectedType by remember { mutableStateOf("Voice") }
+    var selectedType by remember { mutableStateOf("Notification") }
 
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Text(
@@ -587,7 +587,7 @@ fun ReminderTypeSection() {
              style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
-             color = MaterialTheme.colorScheme.onBackground
+             color = CharcoalBrown
         )
         
         Row(
@@ -626,11 +626,11 @@ fun ReminderTypeSection() {
 
 @Composable
 fun TypeCard(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val borderColor = if (isSelected) PrimaryColor.copy(alpha = 0.6f) else Color.Transparent
-    val bg = if (isSelected) PrimaryColor.copy(alpha = 0.05f) else MaterialTheme.colorScheme.surface
-    val iconBg = if (isSelected) PrimaryColor else MatteLavender
-    val iconTint = if (isSelected) Color.White else PrimaryColor
-    val textColor = if (isSelected) PrimaryColor else MaterialTheme.colorScheme.onBackground
+    val borderColor = if (isSelected) MatteTerracotta.copy(alpha = 0.6f) else SubtleBorder
+    val bg = if (isSelected) MatteTerracotta.copy(alpha = 0.1f) else WarmOffWhite
+    val iconBg = if (isSelected) MatteTerracotta else MutedClay
+    val iconTint = if (isSelected) Color.White else MatteTerracotta
+    val textColor = if (isSelected) MatteTerracotta else CharcoalBrown
     
     Column(
         modifier = modifier
@@ -665,8 +665,8 @@ fun VoiceRecordingCard() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
+            .border(1.dp, SubtleBorder, RoundedCornerShape(24.dp))
+            .background(WarmOffWhite, RoundedCornerShape(24.dp))
             .padding(24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -696,7 +696,7 @@ fun VoiceRecordingCard() {
                          .width(4.dp)
                          .fillMaxHeight(heightAnim.value)
                          .clip(RoundedCornerShape(50))
-                         .background(PrimaryColor)
+                         .background(SoftCoral)
                  )
              }
         }
@@ -706,12 +706,12 @@ fun VoiceRecordingCard() {
                 text = "RECORDING...",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryColor
+                color = SoftCoral
             )
             Text(
                 text = "Tap to stop or redo",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onTertiary
+                color = MutedTaupe
             )
         }
         
@@ -744,27 +744,27 @@ fun RepeatSection() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
+                .border(1.dp, SubtleBorder, RoundedCornerShape(24.dp))
+                .background(WarmOffWhite, RoundedCornerShape(24.dp))
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Repeat, contentDescription = "Repeat", tint = MaterialTheme.colorScheme.onTertiary)
+                Icon(Icons.Rounded.Repeat, contentDescription = "Repeat", tint = MutedTaupe)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
                         text = "Repeat Reminder",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = CharcoalBrown
                     )
                     if (isRepeatEnabled && selectedDays.isNotEmpty()) {
                         Text(
                            text = getRepeatSummary(selectedDays),
                            style = MaterialTheme.typography.labelSmall,
-                           color = PrimaryColor
+                           color = MatteTerracotta
                         )
                     }
                 }
@@ -782,10 +782,10 @@ fun RepeatSection() {
                 },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = PrimaryColor,
+                    checkedTrackColor = MatteTerracotta,
                     checkedBorderColor = Color.Transparent,
                     uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = Color(0xFFE9E9EA),
+                    uncheckedTrackColor = SubtleBorder,
                     uncheckedBorderColor = Color.Transparent
                 )
             )
@@ -822,8 +822,8 @@ fun RepeatSelectionDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(28.dp))
+                .background(WarmOffWhite)
+                .border(1.dp, SubtleBorderRepeat, RoundedCornerShape(28.dp))
                 .padding(24.dp)
         ) {
             Column(
@@ -833,7 +833,7 @@ fun RepeatSelectionDialog(
                     text = "Repeat Every",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = DeepCocoa
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -845,7 +845,8 @@ fun RepeatSelectionDialog(
                         currentSelection = if (allSelected) emptySet() else (1..7).toSet()
                     },
                     shape = RoundedCornerShape(24.dp),
-                    color = Color(0xFFEBE7F3), // Matte Lavender
+                    color = VeryLightPeach,
+                    border = BorderStroke(1.dp, SubtleBorderRepeat),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -856,7 +857,7 @@ fun RepeatSelectionDialog(
                         Icon(
                             imageVector = Icons.Rounded.CheckCircle,
                             contentDescription = null,
-                            tint = if (allSelected) PrimaryColor else PrimaryColor.copy(alpha = 0.5f),
+                            tint = if (allSelected) MattePastelCoral else WarmGrey,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -864,7 +865,7 @@ fun RepeatSelectionDialog(
                             text = "Select All Days",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = PrimaryColor
+                            color = DeepCocoa
                         )
                     }
                 }
@@ -879,8 +880,9 @@ fun RepeatSelectionDialog(
                     days.forEachIndexed { index, dayLabel ->
                         val dayId = index + 1
                         val isSelected = currentSelection.contains(dayId)
-                        val bgColor = if (isSelected) PrimaryColor else Color(0xFFF1F1F5) // Matte Gray
-                        val textColor = if (isSelected) Color.White else Color.Gray
+                        val bgColor = if (isSelected) MattePastelCoral else MutedPebble
+                        val textColor = if (isSelected) Color.White else WarmGrey
+                        val borderColor = if (isSelected) MattePastelCoral else SubtleBorderRepeat
                         
                         Box(
                             modifier = Modifier
@@ -888,6 +890,7 @@ fun RepeatSelectionDialog(
                                 .shadow(if (isSelected) 4.dp else 0.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.3f))
                                 .clip(CircleShape)
                                 .background(bgColor)
+                                .border(1.dp, borderColor, CircleShape)
                                 .clickable {
                                     currentSelection = if (isSelected) {
                                         currentSelection - dayId
@@ -916,11 +919,7 @@ fun RepeatSelectionDialog(
                         .height(56.dp)
                         .shadow(8.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.3f))
                         .clip(CircleShape)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(PrimaryColor, Color(0xFF7C41F2))
-                            )
-                        )
+                        .background(MattePastelCoral)
                         .clickable { onConfirm(currentSelection) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -928,7 +927,7 @@ fun RepeatSelectionDialog(
                         text = "Confirm",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = DeepCocoa
                     )
                 }
             }
@@ -985,9 +984,9 @@ fun CreateCategoryDialog(
                     .padding(24.dp)
                     .clickable(enabled = false) {}, // Prevent click through
                 shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = WarmOffWhite,
                 tonalElevation = 0.dp,
-                shadowElevation = 0.dp
+                shadowElevation = 8.dp
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp),
@@ -997,7 +996,7 @@ fun CreateCategoryDialog(
                         text = if (existingCategory != null) "Edit Category" else "New Category",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = CharcoalBrown
                     )
                     
                     if (showError) {
@@ -1018,16 +1017,18 @@ fun CreateCategoryDialog(
                             categoryName = it 
                             showError = false // Clear error on interaction
                         },
-                        placeholder = { Text("Category Name", color = Color.Gray) },
+                        placeholder = { Text("Category Name", color = MutedTaupe) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
-                            .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp)),
+                            .border(1.dp, SubtleBorder, RoundedCornerShape(16.dp)),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f),
+                            focusedContainerColor = SoftBeige,
+                            unfocusedContainerColor = SoftBeige,
                             focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = CharcoalBrown,
+                            unfocusedTextColor = CharcoalBrown
                         ),
                         shape = RoundedCornerShape(16.dp),
                         singleLine = true
@@ -1041,7 +1042,7 @@ fun CreateCategoryDialog(
                             text = "ICON",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Gray,
+                            color = MutedTaupe,
                             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
                         )
                         
@@ -1081,13 +1082,13 @@ fun CreateCategoryDialog(
                             items(displayedIcons.size) { index ->
                                 val icon = displayedIcons[index]
                                 val isIconSelected = selectedIcon == icon
-                                val borderColor = if (isIconSelected) Color.Black.copy(alpha = 0.5f) else Color.Transparent
+                                val borderColor = if (isIconSelected) CharcoalBrown.copy(alpha = 0.7f) else Color.Transparent
 
                                 Box(
                                     modifier = Modifier
                                         .aspectRatio(1f)
                                         .clip(RoundedCornerShape(16.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                                        .background(SoftBeige)
                                         .border(2.dp, borderColor, RoundedCornerShape(16.dp)) // Selected Border
                                         .clickable { 
                                             selectedIcon = icon
@@ -1098,7 +1099,7 @@ fun CreateCategoryDialog(
                                     Icon(
                                         imageVector = icon,
                                         contentDescription = null,
-                                        tint = if(isIconSelected) Color.Black else Color.Gray,
+                                        tint = if(isIconSelected) CharcoalBrown else MutedTaupe,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -1111,14 +1112,14 @@ fun CreateCategoryDialog(
                                         modifier = Modifier
                                             .aspectRatio(1f)
                                             .clip(RoundedCornerShape(16.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                                            .background(SoftBeige)
                                             .clickable { isExpanded = true },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Rounded.MoreHoriz,
                                             contentDescription = "More",
-                                            tint = Color.Gray,
+                                            tint = MutedTaupe,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
@@ -1129,14 +1130,14 @@ fun CreateCategoryDialog(
                                         modifier = Modifier
                                             .aspectRatio(1f)
                                             .clip(RoundedCornerShape(16.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f))
+                                            .background(SoftBeige)
                                             .clickable { isExpanded = false },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Rounded.KeyboardArrowUp,
                                             contentDescription = "Collapse",
-                                            tint = Color.Gray,
+                                            tint = MutedTaupe,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
@@ -1153,23 +1154,23 @@ fun CreateCategoryDialog(
                             text = "COLOR",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Gray,
+                            color = MutedTaupe,
                             modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
                         )
                         
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            listOf(MatteMint, MattePeach, MatteLavender, MatteBlue).forEach { color ->
+                            listOf(SageGreen, SoftCoral, DustySand, SoftSkyBlue).forEach { color ->
                                 val isColorSelected = selectedColor == color
-                                val borderColor = if (isColorSelected) Color.Black.copy(alpha = 0.5f) else Color.Transparent
+                                val borderColor = if (isColorSelected) CharcoalBrown.copy(alpha = 0.7f) else Color.Transparent
                                 
                                 Box(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .clip(CircleShape)
                                         .background(color)
-                                        .border(2.dp, borderColor, CircleShape) // Selected Border
+                                        .border(3.dp, borderColor, CircleShape) // Selected Border
                                         .clickable { 
                                             selectedColor = color 
                                             showError = false // Clear error on interaction
@@ -1195,7 +1196,7 @@ fun CreateCategoryDialog(
                         ) {
                             Text(
                                 if (existingCategory != null) "Remove" else "Cancel",
-                                color = Color.Gray,
+                                color = CharcoalBrown,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -1223,9 +1224,9 @@ fun CreateCategoryDialog(
                             modifier = Modifier
                                 .weight(2f)
                                 .height(56.dp)
-                                .shadow(8.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.5f)),
+                                .shadow(8.dp, CircleShape, spotColor = MatteTerracotta.copy(alpha = 0.5f)),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryColor
+                                containerColor = MatteTerracotta
                             ),
                             shape = CircleShape
                         ) {

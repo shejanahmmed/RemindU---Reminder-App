@@ -16,13 +16,12 @@ class RemindUViewModel : ViewModel() {
     val reminders = mutableStateListOf<Reminder>()
 
     // Form State
-    var reminderTitle = mutableStateOf("")
-        private set
+
         
     var reminderDescription = mutableStateOf("")
         private set
         
-    var selectedDateTime = mutableStateOf<LocalDateTime?>(null)
+    var selectedDateTime = mutableStateOf<LocalDateTime?>(LocalDateTime.now())
         private set
         
     var selectedType = mutableStateOf("Voice")
@@ -43,9 +42,7 @@ class RemindUViewModel : ViewModel() {
     var repeatDays = mutableStateOf<Set<Int>>(emptySet())
 
     // Events
-    fun onTitleChange(newTitle: String) {
-        reminderTitle.value = newTitle
-    }
+
     
     fun onDescriptionChange(newDescription: String) {
         reminderDescription.value = newDescription
@@ -84,11 +81,11 @@ class RemindUViewModel : ViewModel() {
     }
     
     fun saveReminder(onSuccess: () -> Unit) {
-        if (reminderTitle.value.isBlank() || selectedDateTime.value == null) return
+        if (reminderDescription.value.isBlank() || selectedDateTime.value == null) return
         
         val newReminder = Reminder(
-            title = reminderTitle.value,
-            description = reminderDescription.value,
+            title = reminderDescription.value,
+            description = "",
             dateTime = selectedDateTime.value!!,
             type = selectedType.value,
             category = selectedCategory.value,
@@ -98,9 +95,8 @@ class RemindUViewModel : ViewModel() {
         reminders.add(newReminder)
         
         // Reset Form
-        reminderTitle.value = ""
         reminderDescription.value = ""
-        selectedDateTime.value = null
+        selectedDateTime.value = LocalDateTime.now()
         selectedType.value = "Voice"
         selectedCategory.value = null
         isRepeatEnabled.value = false

@@ -65,7 +65,7 @@ fun DateTimePickerBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = WarmOffWhite,
         dragHandle = { BottomSheetDefaults.DragHandle() },
         shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
     ) {
@@ -103,7 +103,7 @@ fun DateTimePickerBottomSheet(
                         Text(
                             text = selectedDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")),
                             style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryColor,
+                            color = CharcoalBrown,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 24.dp)
                         )
@@ -145,7 +145,7 @@ private fun BottomSheetHeader(title: String) {
             text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = CharcoalBrown
         )
     }
 }
@@ -169,7 +169,7 @@ private fun MonthHeader(
             Icon(
                 imageVector = Icons.Rounded.KeyboardArrowLeft,
                 contentDescription = "Previous Month",
-                tint = MaterialTheme.colorScheme.onSurface
+                tint = CharcoalBrown
             )
         }
 
@@ -177,14 +177,14 @@ private fun MonthHeader(
             text = currentMonth.format(formatter),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = CharcoalBrown
         )
 
         IconButton(onClick = onNextMonth) {
             Icon(
                 imageVector = Icons.Rounded.KeyboardArrowRight,
                 contentDescription = "Next Month",
-                tint = MaterialTheme.colorScheme.onSurface
+                tint = CharcoalBrown
             )
         }
     }
@@ -220,7 +220,7 @@ private fun CalendarGrid(
                     text = day,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiary,
+                    color = MutedTaupe,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
                 )
@@ -272,10 +272,10 @@ private fun CalendarDayItem(
         modifier = Modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) PrimaryColor.copy(alpha = 0.1f) else Color.Transparent)
+            .background(if (isSelected) SageGreen.copy(alpha = 0.2f) else Color.Transparent)
             .border(
                 width = if (isSelected) 1.dp else 0.dp,
-                color = if (isSelected) PrimaryColor.copy(alpha = 0.2f) else Color.Transparent,
+                color = if (isSelected) SageGreen else Color.Transparent,
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable { onClick() }
@@ -284,7 +284,7 @@ private fun CalendarDayItem(
             text = dayNumber.toString(),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) PrimaryColor else MaterialTheme.colorScheme.onBackground
+            color = if (isSelected) CharcoalBrown else MutedTaupe
         )
     }
 }
@@ -299,7 +299,7 @@ private fun DigitalTimePickerWheel(
             .fillMaxWidth()
             .height(110.dp) // Reduced height to show only 1 prev/next number (total 3 items)
             .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            .background(VeryLightClay),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -331,7 +331,7 @@ private fun DigitalTimePickerWheel(
 
         Text(
             text = " : ",
-            color = PrimaryColor,
+            color = CharcoalBrown,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -425,7 +425,7 @@ private fun WheelPicker(
         ) {
              Text(
                 text = label(actualIndex),
-                color = if (isSelected) PrimaryColor else MaterialTheme.colorScheme.onBackground,
+                color = if (isSelected) CharcoalBrown else MutedTaupe,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
             )
@@ -441,7 +441,7 @@ private fun AmPmToggle(
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MutedClay)
             .padding(4.dp)
     ) {
         AmPmOption(text = "AM", isSelected = isAm, onClick = { onToggle(true) })
@@ -458,7 +458,7 @@ private fun AmPmOption(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) PrimaryColor.copy(alpha = 0.1f) else Color.Transparent)
+            .background(if (isSelected) SageGreen.copy(alpha = 0.3f) else Color.Transparent)
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 8.dp) // Adjusted padding (intermediate size)
     ) {
@@ -466,7 +466,7 @@ private fun AmPmOption(
             text = text,
             style = MaterialTheme.typography.titleSmall, // Adjusted text size
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) PrimaryColor else MaterialTheme.colorScheme.onTertiary
+            color = if (isSelected) CharcoalBrown else MutedTaupe
         )
     }
 }
@@ -480,7 +480,7 @@ private fun ConfirmButton(text: String, onConfirm: () -> Unit) {
             .height(56.dp)
             .shadow(8.dp, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.5f)),
         colors = ButtonDefaults.buttonColors(
-            containerColor = PrimaryColor
+            containerColor = MatteTerracotta
         ),
         shape = CircleShape
     ) {

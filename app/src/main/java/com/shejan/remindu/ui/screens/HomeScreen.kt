@@ -16,6 +16,8 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,6 +40,11 @@ import com.shejan.remindu.ui.viewmodels.RemindUViewModel
 import java.time.format.DateTimeFormatter
 import java.time.LocalDate
 
+import java.time.DayOfWeek
+import java.time.temporal.TemporalAdjusters
+import java.time.format.TextStyle
+import java.util.Locale
+
 @Composable
 fun HomeScreen(
     onFabClick: () -> Unit,
@@ -52,6 +59,9 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // State for selected date
+            var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -63,9 +73,12 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 CircularProgressSection()
                 Spacer(modifier = Modifier.height(32.dp))
-                CalendarSection()
+                CalendarSection(
+                    selectedDate = selectedDate,
+                    onDateSelected = { selectedDate = it }
+                )
                 Spacer(modifier = Modifier.height(32.dp))
-                TimelineSection(viewModel)
+                TimelineSection(viewModel, selectedDate)
                 Spacer(modifier = Modifier.height(100.dp)) // Extra space for scrolling above FAB
             }
         }
@@ -221,44 +234,56 @@ fun CircularProgressSection() {
 }
 
 @Composable
-fun CalendarSection() {
+fun CalendarSection(selectedDate: LocalDate, onDateSelected: (LocalDate) -> Unit) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
+            val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
             Text(
-                text = "May 2024",
+                text = selectedDate.format(monthFormatter),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                 color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "View All",
+                text = "Today",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { onDateSelected(LocalDate.now()) }
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
         
-        val days = listOf("Mon" to "13", "Tue" to "14", "Wed" to "15", "Thu" to "16", "Fri" to "17", "Sat" to "18")
+        // Generate current week or a rolling window
+        val startOfWindow = LocalDate.now().minusDays(1) // Start from yesterday? Or Monday? Let's show Today - 2 to Today + 4
+        val dates = (0..6).map { startOfWindow.plusDays(it.toLong()) }
         
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
              contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
-            items(days) { (day, date) ->
-                val isSelected = date == "15"
-                CalendarDayItem(day = day, date = date, isSelected = isSelected)
+            items(dates) { date ->
+                val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                val dayNumber = date.dayOfMonth.toString()
+                val isSelected = date == selectedDate
+                
+                CalendarDayItem(
+                    day = dayName, 
+                    date = dayNumber, 
+                    isSelected = isSelected,
+                    onClick = { onDateSelected(date) }
+                )
             }
         }
     }
 }
 
 @Composable
-fun CalendarDayItem(day: String, date: String, isSelected: Boolean) {
+fun CalendarDayItem(day: String, date: String, isSelected: Boolean, onClick: () -> Unit) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
     val contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
     val subTextColor = if (isSelected) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onTertiary
@@ -277,7 +302,8 @@ fun CalendarDayItem(day: String, date: String, isSelected: Boolean) {
                 width = 1.dp,
                 color = if (isSelected) Color.Transparent else Color.LightGray.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(16.dp)
-            ),
+            )
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -307,21 +333,20 @@ fun CalendarDayItem(day: String, date: String, isSelected: Boolean) {
 }
 
 @Composable
-fun TimelineSection(viewModel: RemindUViewModel) {
+fun TimelineSection(viewModel: RemindUViewModel, selectedDate: LocalDate) {
     val reminders = viewModel.reminders
-    val today = LocalDate.now()
-    val todayReminders = reminders.filter { it.dateTime.toLocalDate() == today }
+    val selectedReminders = reminders.filter { it.dateTime.toLocalDate() == selectedDate }
     
     Column {
         Text(
-            text = "Today's Timeline",
+            text = if (selectedDate == LocalDate.now()) "Today's Timeline" else "Timeline for ${selectedDate.format(DateTimeFormatter.ofPattern("MMM d"))}",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(modifier = Modifier.height(24.dp))
         
-        if (todayReminders.isEmpty()) {
+        if (selectedReminders.isEmpty()) {
              Box(
                  modifier = Modifier.fillMaxWidth().padding(32.dp),
                  contentAlignment = Alignment.Center
@@ -351,7 +376,7 @@ fun TimelineSection(viewModel: RemindUViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
                     
-                    todayReminders.forEachIndexed { index, reminder ->
+                    selectedReminders.forEachIndexed { index, reminder ->
                          TimelineItem(
                             title = reminder.title,
                             subtitle = reminder.description.ifBlank { reminder.category?.name ?: "Reminder" },
@@ -511,34 +536,36 @@ fun TimelineItem(
 }
 
 
+
+
+
 @Composable
 fun BottomNavigationBar(selectedItem: String, onItemSelected: (String) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 24.dp)
-            .height(100.dp), // Increased height to allow items to lift without clipping parent
+            .height(100.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // 1. Background Pill (Surface)
+        // Background Pill (Surface)
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
                 .shadow(10.dp, RoundedCornerShape(50), spotColor = Color.Black.copy(alpha = 0.1f)),
             shape = RoundedCornerShape(50),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+            color = WarmOffWhite.copy(alpha = 0.9f)
         ) {
             // Empty content, just for background visuals
         }
 
-        // 2. Content Row (Sibling to Surface so it doesn't get clipped)
+        // Content Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp) // Brings icons closer together
-                .height(64.dp)
-                .align(Alignment.BottomCenter), // Matches Surface position
+                .padding(horizontal = 16.dp)
+                .height(64.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -603,8 +630,8 @@ fun NavItem(
         animationSpec = tween(300)
     )
     
-    val containerColor = if (isSelected) PrimaryColor else Color.Transparent
-    val iconColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onTertiary
+    val containerColor = if (isSelected) MatteTerracotta else Color.Transparent
+    val iconColor = if (isSelected) Color.White else CharcoalBrown
     val shadowElevation = if (isSelected) 8.dp else 0.dp
 
     Box(
@@ -613,7 +640,7 @@ fun NavItem(
                 translationY = offsetY.toPx()
             }
             .size(size) // Animate size from icon size to FAB size
-            .shadow(shadowElevation, CircleShape, spotColor = PrimaryColor.copy(alpha = 0.5f))
+            .shadow(shadowElevation, CircleShape, spotColor = MatteTerracotta.copy(alpha = 0.5f))
             .clip(CircleShape)
             .background(containerColor)
             .clickable(onClick = onClick),
