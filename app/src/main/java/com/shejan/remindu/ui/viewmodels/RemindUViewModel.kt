@@ -2,7 +2,7 @@ package com.shejan.remindu.ui.viewmodels
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import com.shejan.remindu.ui.screens.Category
 import com.shejan.remindu.data.model.Reminder
 import java.time.LocalDateTime
@@ -10,7 +10,25 @@ import java.time.LocalDateTime
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 
-class RemindUViewModel : ViewModel() {
+import android.app.Application
+import android.content.Context
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.TypeAdapter
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonWriter
+import com.google.gson.reflect.TypeToken
+
+class RemindUViewModel(application: Application) : AndroidViewModel(application) {
+    
+    private val prefs = application.getSharedPreferences("remindu_prefs", Context.MODE_PRIVATE)
+    private val gson: Gson = GsonBuilder()
+        .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter())
+        .create()
+
+    init {
+        loadReminders()
+    }
     
     // Data State
     val reminders = mutableStateListOf<Reminder>()
@@ -21,7 +39,7 @@ class RemindUViewModel : ViewModel() {
     var reminderDescription = mutableStateOf("")
         private set
         
-    var selectedDateTime = mutableStateOf<LocalDateTime?>(LocalDateTime.now())
+    var selectedDateTime = mutableStateOf<LocalDateTime?>(null)
         private set
         
     var selectedType = mutableStateOf("Voice")
@@ -80,8 +98,15 @@ class RemindUViewModel : ViewModel() {
         showCategoryDialog.value = true
     }
     
-    fun saveReminder(onSuccess: () -> Unit) {
-        if (reminderDescription.value.isBlank() || selectedDateTime.value == null) return
+    fun saveReminder(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        if (reminderDescription.value.isBlank()) {
+            onError("Please enter a reminder description")
+            return
+        }
+        if (selectedDateTime.value == null) {
+            onError("Please select a date and time")
+            return
+        }
         
         val newReminder = Reminder(
             title = reminderDescription.value,
@@ -96,12 +121,38 @@ class RemindUViewModel : ViewModel() {
         
         // Reset Form
         reminderDescription.value = ""
-        selectedDateTime.value = LocalDateTime.now()
+        selectedDateTime.value = null
         selectedType.value = "Voice"
         selectedCategory.value = null
         isRepeatEnabled.value = false
         repeatDays.value = emptySet()
         
         onSuccess()
+        saveReminders()
+    }
+
+    private fun saveReminders() {
+        val json = gson.toJson(reminders.toList())
+        prefs.edit().putString("reminders_data", json).apply()
+    }
+
+    private fun loadReminders() {
+        val json = prefs.getString("reminders_data", null)
+        if (json != null) {
+            val type = object : TypeToken<List<Reminder>>() {}.type
+            val loadedList: List<Reminder> = gson.fromJson(json, type)
+            reminders.clear()
+            reminders.addAll(loadedList)
+        }
+    }
+}
+
+class LocalDateTimeAdapter : TypeAdapter<LocalDateTime>() {
+    override fun write(out: JsonWriter, value: LocalDateTime?) {
+        out.value(value?.toString())
+    }
+    override fun read(input: JsonReader): LocalDateTime? {
+        val str = input.nextString()
+        return if (str != null) LocalDateTime.parse(str) else null
     }
 }

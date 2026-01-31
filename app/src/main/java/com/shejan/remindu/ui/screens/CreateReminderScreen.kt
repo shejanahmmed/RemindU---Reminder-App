@@ -42,12 +42,15 @@ import com.shejan.remindu.ui.viewmodels.RemindUViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 
 @Composable
 fun CreateReminderScreen(
     onBackClick: () -> Unit,
     viewModel: RemindUViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val showBottomSheet by viewModel.showBottomSheet
     val showCategoryDialog by viewModel.showCategoryDialog
     val editingCategory by viewModel.editingCategory
@@ -118,7 +121,12 @@ fun CreateReminderScreen(
                         .clip(RoundedCornerShape(28.dp))
                         .background(MatteTerracotta)
                         .clickable {
-                            viewModel.saveReminder(onSuccess = onBackClick)
+                            viewModel.saveReminder(
+                                onSuccess = onBackClick,
+                                onError = { msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            )
                         },
                     contentAlignment = Alignment.Center
                 ) {
